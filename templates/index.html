@@ -3,7 +3,7 @@
 <head>
     <title>Flask Chat</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap.min.css') }}">
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.js"></script>
     <script src="{{ url_for('static', filename='bootstrap.bundle.min.js') }}"></script>
@@ -67,7 +67,6 @@
         $(document).ready(function() {
             // Connect to the WebSocket server
             var socket = io.connect('http://' + document.domain + ':' + location.port);
-
             // Receive the list of messages and update the message list
             socket.on('message_list', function(data) {
                 var messageList = $('#message-list');
@@ -90,9 +89,9 @@
             function formatMessage(message) {
                 var html = '';
                 if (message.approved) {
-                    html += message.content + ' <span class="text-success ml-2">&#9989;</span>';
+                    html += message.username + ' : ' + message.content + ' <span class="text-success ml-2">&#9989;</span>';
                 } else {
-                    html += message.content + ' <span class="text-danger ml-2"> &#10060;</span>';
+                    html += message.username + ' : ' + message.content + ' <span class="text-danger ml-2"> &#10060;</span>';
                 }
                 return html;
             }

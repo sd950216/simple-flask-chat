@@ -29,13 +29,7 @@ class Message(db.Model):
     content = db.Column(db.String(200), nullable=False)
     approved = db.Column(db.Boolean, default=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
     user = db.relationship('User', backref=db.backref('messages', lazy=True))
-
-
-app.app_context().push()
-# Create all database tables
-db.create_all()
 
 
 @login_manager.user_loader
@@ -43,17 +37,16 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
-messages = [
-    {'content': 'Hello, world!', 'approved': True},
-    {'content': 'This is a sample message.', 'approved': False},
-    {'content': 'Another message here.', 'approved': True},
-    # Add more example messages as needed
-]
+def convert_messages_to_dict():
+    messages = Message.query.all()
+    return [{'content': message.content, 'approved': message.approved, 'username': message.user.username} for message in
+            messages]
 
 
 @app.route('/')
 @login_required
 def index():
+    messages = convert_messages_to_dict()
     return render_template('index.html', username=current_user.username, messages=messages)
 
 
@@ -89,7 +82,7 @@ def register():
         if user:
             return render_template('register.html', error='Username already exists')
 
-        new_user = User(username=username, password=generate_password_hash(password), role='user')
+        new_user = User(username, password=generate_password_hash(password), role='user')
         db.session.add(new_user)
         db.session.commit()
         login_user(new_user)
@@ -107,9 +100,13 @@ def logout():
 
 @app.route('/send_message', methods=['POST'])
 def send_message():
-    message = {'content': request.form['message'], 'approved': False}
-
-    messages.append(message)
+    if current_user.role == 'admin':
+        message = {'content': request.form['message'], 'approved': True, 'username': current_user.username}
+    else:
+        message = {'content': request.form['message'], 'approved': False, 'username': current_user.username}
+    new_message = Message(content=message['content'], approved=message['approved'], user_id=current_user.id)
+    db.session.add(new_message)
+    db.session.commit()
     # Emit the message to all connected clients
     socketio.emit('new_message', message)
     return jsonify({'message': 'Message sent successfully'})
@@ -117,18 +114,15 @@ def send_message():
 
 @app.route('/get_messages')
 def get_messages():
+    messages = convert_messages_to_dict()
     return jsonify({'messages': messages})
 
 
 @socketio.on('connect')
 def handle_connect():
+    messages = convert_messages_to_dict()
     # Emit the list of messages to the connected client
     emit('message_list', {'messages': messages})
-
-
-@socketio.event
-def my_ping():
-    emit('my_pong')
 
 
 if __name__ == '__main__':
