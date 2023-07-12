@@ -1,0 +1,22 @@
+
+.reload-icon {
+    background-image: url('static/reload.png');
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 5px;
+}
+
+.error {
+    color: red;
+}
+#messages {
+    background-color: #f8f9fa;
+    padding: 10px;
+}
+
+#message-form {
+    margin-top: 20px;
+}
+

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flask Chat</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='bootstrap.bundle.min.js') }}"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="{{ url_for('index') }}">Flask Chat</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav ml-auto">
+                {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('register') }}">Register</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>Flask Chat</h1>
+
+        {% if current_user.is_authenticated %}
+            <p>Welcome, {{ current_user.username }}!</p>
+        {% else %}
+            <p>Please log in or register to use the chat.</p>
+        {% endif %}
+
+        <div id="messages">
+            <ul id="message-list" class="list-group">
+                {% for message in messages %}
+                    <li class="list-group-item">
+                        {% if message.approved %}
+                            {{ message.content }}
+                            <span class="text-success ml-2">&#10004;</span>
+                        {% else %}
+                            <span class="reload-icon mr-2"></span> {{ message.content }}
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <form id="message-form" {% if not current_user.is_authenticated %}disabled{% endif %}>
+            <div class="input-group">
+                <input type="text" id="message-input" class="form-control" placeholder="Type your message...">
+                <div class="input-group-append">
+                    <button type="submit" class="btn btn-primary">Send</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            // Connect to the WebSocket server
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+            // Receive the list of messages and update the message list
+            socket.on('message_list', function(data) {
+                var messageList = $('#message-list');
+                messageList.empty();
+                for (var i = 0; i < data.messages.length; i++) {
+                    var message = data.messages[i];
+                    var listItem = $('<li>').addClass('list-group-item').html(formatMessage(message));
+                    messageList.append(listItem);
+                }
+            });
+
+            // Receive a new message and update the message list
+            socket.on('new_message', function(message) {
+                var messageList = $('#message-list');
+                var listItem = $('<li>').addClass('list-group-item').html(formatMessage(message));
+                messageList.append(listItem);
+            });
+
+            // Format the message with or without icons
+            function formatMessage(message) {
+                var html = '';
+                if (message.approved) {
+                    html += message.content + ' <span class="text-success ml-2">&#9989;</span>';
+                } else {
+                    html += message.content + ' <span class="text-danger ml-2"> &#10060;</span>';
+                }
+                return html;
+            }
+
+            // Send a message when the form is submitted
+            $('#message-form').submit(function(event) {
+                event.preventDefault();
+                var message = $('#message-input').val();
+                $('#message-input').val('');
+
+                $.ajax({
+                    url: '/send_message',
+                    type: 'POST',
+                    data: {message: message},
+                    success: function(response) {
+                        console.log(response);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
