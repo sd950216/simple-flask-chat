@@ -39,7 +39,7 @@ def load_user(user_id):
 
 def convert_messages_to_dict():
     messages = Message.query.all()
-    return [{'content': message.content, 'approved': message.approved, 'username': message.user.username} for message in
+    return [{'content': message.content, 'approved': message.approved, 'username': message.user.username , 'id': message.id} for message in
             messages]
 
 
@@ -77,12 +77,13 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        role = request.form['role']
 
         user = User.query.filter_by(username=username).first()
         if user:
             return render_template('register.html', error='Username already exists')
 
-        new_user = User(username, password=generate_password_hash(password), role='user')
+        new_user = User(username=username, password=generate_password_hash(password), role=role)
         db.session.add(new_user)
         db.session.commit()
         login_user(new_user)
@@ -100,15 +101,21 @@ def logout():
 
 @app.route('/send_message', methods=['POST'])
 def send_message():
+    if 'message' not in request.form or not request.form['message']:
+        return jsonify({'error': 'Message cannot be empty'})
+
     if current_user.role == 'admin':
         message = {'content': request.form['message'], 'approved': True, 'username': current_user.username}
     else:
         message = {'content': request.form['message'], 'approved': False, 'username': current_user.username}
+
     new_message = Message(content=message['content'], approved=message['approved'], user_id=current_user.id)
     db.session.add(new_message)
     db.session.commit()
+
     # Emit the message to all connected clients
     socketio.emit('new_message', message)
+
     return jsonify({'message': 'Message sent successfully'})
 
 
@@ -123,6 +130,38 @@ def handle_connect():
     messages = convert_messages_to_dict()
     # Emit the list of messages to the connected client
     emit('message_list', {'messages': messages})
+
+
+@app.route('/approve_messages', methods=['GET', 'POST'])
+@login_required
+def approve_messages():
+    if current_user.role != 'admin':
+        return redirect(url_for('index'))
+
+    # Fetch all messages pending approval
+    pending_messages = Message.query.filter_by(approved=False).all()
+
+    if request.method == 'POST':
+        # Get the list of message IDs to approve
+        approved_ids = request.form.getlist('approved_messages')
+
+        # Update the approved status for the selected messages
+        for message in pending_messages:
+            if str(message.id) in approved_ids:
+                message.approved = True
+
+        # Commit the changes to the database
+        db.session.commit()
+
+        # Emit the approved messages to connected clients
+        approved_messages = Message.query.filter(Message.id.in_(approved_ids)).all()
+        for message in approved_messages:
+            inner_message = {'message_id': message.id, 'content': message.content, 'username': message.user.username}
+            socketio.emit('message_approved', inner_message)
+
+        return redirect(url_for('approve_messages'))
+
+    return render_template('approve_messages.html', messages=pending_messages)
 
 
 if __name__ == '__main__':

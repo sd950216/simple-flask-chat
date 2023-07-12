@@ -14,6 +14,11 @@
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav ml-auto">
                 {% if current_user.is_authenticated %}
+                    {% if current_user.role == 'admin' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('approve_messages') }}">Approve Messages</a>
+                        </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
                     </li>
@@ -41,12 +46,11 @@
         <div id="messages">
             <ul id="message-list" class="list-group">
                 {% for message in messages %}
-                    <li class="list-group-item">
+                    <li id="message-{{ message.id }}" class="list-group-item">
                         {% if message.approved %}
-                            {{ message.content }}
-                            <span class="text-success ml-2">&#10004;</span>
+                            {{ message.username }} : {{ message.content }}
                         {% else %}
-                            <span class="reload-icon mr-2"></span> {{ message.content }}
+                            {{ message.username }} : {{ message.content }}
                         {% endif %}
                     </li>
                 {% endfor %}
@@ -65,23 +69,24 @@
 
     <script>
         $(document).ready(function() {
-            // Connect to the WebSocket server
-            var socket = io.connect('http://' + document.domain + ':' + location.port);
+            var socket = io();
+
             // Receive the list of messages and update the message list
             socket.on('message_list', function(data) {
                 var messageList = $('#message-list');
                 messageList.empty();
                 for (var i = 0; i < data.messages.length; i++) {
                     var message = data.messages[i];
-                    var listItem = $('<li>').addClass('list-group-item').html(formatMessage(message));
+                    var listItem = $('<li>').attr('id', 'message-' + message.id).addClass('list-group-item').html(formatMessage(message));
                     messageList.append(listItem);
                 }
             });
 
+
             // Receive a new message and update the message list
             socket.on('new_message', function(message) {
                 var messageList = $('#message-list');
-                var listItem = $('<li>').addClass('list-group-item').html(formatMessage(message));
+                    var listItem = $('<li>').attr('id', 'message-' + message.id).addClass('list-group-item').html(formatMessage(message));
                 messageList.append(listItem);
             });
 
@@ -89,12 +94,22 @@
             function formatMessage(message) {
                 var html = '';
                 if (message.approved) {
-                    html += message.username + ' : ' + message.content + ' <span class="text-success ml-2">&#9989;</span>';
+                    html += message.username + ' : ' + message.content + ' <span class="right-mark ml-2"></span>';
                 } else {
-                    html += message.username + ' : ' + message.content + ' <span class="text-danger ml-2"> &#10060;</span>';
+                    html += message.username + ' : ' + message.content + ' <span class="wrong-mark ml-2"></span>';
                 }
                 return html;
             }
+
+                socket.on('message_approved', function(message) {
+                    var messageItem = $('#message-' + message.message_id);
+                     if (messageItem) {
+                        messageItem.removeClass('wrong-mark');  // Remove the old class name
+                        messageItem.addClass('list-group-item right-mark ml-2');     // Add the new class name
+                        messageItem.text(message.username + ' : ' + message.content);       // Update the message content
+                    }
+                });
+
 
             // Send a message when the form is submitted
             $('#message-form').submit(function(event) {

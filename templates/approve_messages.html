@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Approve Messages</title>
+</head>
+<body>
+    <h1>Pending Messages</h1>
+    <form method="POST" action="{{ url_for('approve_messages') }}">
+        {% for message in messages %}
+            <div>
+                <input type="checkbox" name="approved_messages" value="{{ message.id }}">
+                <span>{{ message.content }}</span>
+                <span> - {{ message.user.username }}</span>
+            </div>
+        {% endfor %}
+        <button type="submit">Approve Selected Messages</button>
+    </form>
+</body>
+</html>

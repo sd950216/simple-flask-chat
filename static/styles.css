@@ -20,3 +20,11 @@
     margin-top: 20px;
 }
 
+.right-mark::after {
+  content: "\2714"; /* Unicode character code for "&#9989;" */
+}
+.wrong-mark::after {
+  content: "\274C"; /* Unicode character code for "&#10060;" */
+}
+
+
