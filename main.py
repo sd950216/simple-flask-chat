@@ -39,8 +39,10 @@ def load_user(user_id):
 
 def convert_messages_to_dict():
     messages = Message.query.all()
-    return [{'content': message.content, 'approved': message.approved, 'username': message.user.username , 'id': message.id} for message in
-            messages]
+    return [
+        {'content': message.content, 'approved': message.approved, 'username': message.user.username, 'id': message.id}
+        for message in
+        messages]
 
 
 @app.route('/')
@@ -61,7 +63,7 @@ def login():
 
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password, password):
-            login_user(user)
+            login_user(user, remember=True)  # Store the user's session
             return redirect(url_for('index'))
         else:
             return render_template('login.html', error='Invalid username or password')
@@ -86,7 +88,7 @@ def register():
         new_user = User(username=username, password=generate_password_hash(password), role=role)
         db.session.add(new_user)
         db.session.commit()
-        login_user(new_user)
+        login_user(user, remember=True)  # Store the user's session
         return redirect(url_for('index'))
 
     return render_template('register.html', error=None)
@@ -132,6 +134,8 @@ def handle_connect():
     emit('message_list', {'messages': messages})
 
 
+# ... Your other route and import statements ...
+
 @app.route('/approve_messages', methods=['GET', 'POST'])
 @login_required
 def approve_messages():
@@ -143,7 +147,8 @@ def approve_messages():
 
     if request.method == 'POST':
         # Get the list of message IDs to approve
-        approved_ids = request.form.getlist('approved_messages')
+        approved_ids = request.form.getlist('approved_messages[]')
+        print(approved_ids)
 
         # Update the approved status for the selected messages
         for message in pending_messages:
@@ -159,9 +164,14 @@ def approve_messages():
             inner_message = {'message_id': message.id, 'content': message.content, 'username': message.user.username}
             socketio.emit('message_approved', inner_message)
 
-        return redirect(url_for('approve_messages'))
+        return jsonify({'message': 'Approved successfully'}), 200
 
     return render_template('approve_messages.html', messages=pending_messages)
+
+
+@app.route('/events')
+def events():
+    return render_template('events-construct.html')
 
 
 if __name__ == '__main__':

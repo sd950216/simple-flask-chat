@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Approve Messages</title>
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+    <title>events</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='bootstrap.min.css') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.js"></script>
@@ -36,44 +36,7 @@
 
 
 
-    <h1>Pending Messages</h1>
-<form id="message-form">
-    {% for message in messages %}
-    <div class="div-inputs" id="form-inputs">
-        <input class="messageCheckbox" type="checkbox" name="approved_messages" value="{{ message.id }}">
-        <span>{{ message.content }}</span>
-        <span> - {{ message.user.username }}</span>
-    </div>
-    {% endfor %}
-    <div id="new-message"></div>
-    <button type="submit">Approve Selected Messages</button>
-</form>
-
-<script>
-    $(document).ready(function() {
-        $('#message-form').submit(function(event) {
-            event.preventDefault();
-            var list = [];
-            var approvedMessages = $('.messageCheckbox:checked'); // Use class selector and :checked to get only checked checkboxes
-            for (var i = 0; i < approvedMessages.length; i++) {
-                list.push(approvedMessages[i].value);
-            }
-
-            $.ajax({
-                url: '/approve_messages',
-                type: 'POST',
-                data: {approved_messages: list},
-                success: function(response) {
-                    console.log(response);
-                    approvedMessages.closest('.div-inputs').remove();
-
-                }
-            });
-        });
-    });
-</script>
-
-
+<p id="message-event">new message events</p>
 
 
 </body>
