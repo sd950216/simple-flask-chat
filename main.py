@@ -107,9 +107,9 @@ def send_message():
         return jsonify({'error': 'Message cannot be empty'})
 
     if current_user.role == 'admin':
-        message = {'content': request.form['message'], 'approved': True, 'username': current_user.username}
+        message = {'content': request.form['message'], 'approved': True, 'username': current_user.username,'id':len(Message.query.all())+1}
     else:
-        message = {'content': request.form['message'], 'approved': False, 'username': current_user.username}
+        message = {'content': request.form['message'], 'approved': False, 'username': current_user.username,'id':len(Message.query.all())+1}
 
     new_message = Message(content=message['content'], approved=message['approved'], user_id=current_user.id)
     db.session.add(new_message)
@@ -117,6 +117,7 @@ def send_message():
 
     # Emit the message to all connected clients
     socketio.emit('new_message', message)
+    print(message.id)
 
     return jsonify({'message': 'Message sent successfully'})
 
@@ -175,4 +176,4 @@ def events():
 
 
 if __name__ == '__main__':
-    socketio.run(app, host='192.168.1.11', port=5000, debug=True)
+    socketio.run(app, host='192.168.1.4', port=5000, debug=True)
